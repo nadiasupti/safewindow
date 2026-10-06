@@ -1,50 +1,104 @@
-# SafeWindow
+# SafeWindow 🌊
 
-**When does each village lose its last road to a flood shelter?**
-A research prototype for the June 2022 Sunamganj (Bangladesh) haor flood, built for NASA Space Apps Challenge 2026.
+**When will a flood-hit village be cut off, and when must aid arrive?**
 
-SafeWindow combines satellite flood maps (Sentinel-1 radar, UNOSAT, NASA MODIS) with the OpenStreetMap road network. For every village it estimates:
+SafeWindow gives each flood-affected village in Bangladesh's haor region three things: the date it loses its last road to safety, the last safe exit route, and a deadline for aid. It combines satellite radar flood maps with road-network analysis.
 
-- the **isolation date range**: when the last road path to any shelter went under water
-- the **safe exit window**: the last date a road route out was still open, and that route
-- the **aid deadline (Survival Clock)**: isolation date + household supply days
-- an **urgency ranking** for responders
-
-NASA GPM IMERG rainfall (local and upstream in Meghalaya) and the MODIS daily flood trend appear alongside the map.
-
-> ⚠️ Research prototype, not an official warning system. Follow official alerts (BMD, FFWC, DDM).
+> Built for the **NASA Space Apps Challenge 2026**.
+> Status: **early prototype**. The pipeline and app run end to end on synthetic demo data; real 2022 data is being prepared.
+> This is a research project, not an official warning system. Always follow official alerts (BMD, FFWC, DDM).
 
 ---
 
-## Quick start: run the synthetic demo (no accounts needed)
+## The Problem
+
+In Sunamganj and other haor areas of Bangladesh, floods often hurt people by cutting villages off from shelters, hospitals, and aid. In 2022, floods in Sylhet and Sunamganj left millions of people stranded.
+
+Most flood tools show **where** the water is. Very few say **when** a village loses access, or **how long** it can survive. Aid planners need that deadline.
+
+## Our Solution
+
+For each village, SafeWindow calculates three things:
+
+| Output | Meaning |
+|---|---|
+| **Isolation date** | The first day no road path to a shelter remains, reported as a date range because satellite images have gaps |
+| **Safe exit window** | The last day, and the route, a village can still use to reach a shelter |
+| **Aid deadline** | Isolation date + days of food and water supply (adjustable) |
+
+Villages are then **ranked by urgency**, so responders know who needs help first.
+
+## How It Works
+
+```
+Satellite radar (SAR)  ──►  Flood map for each date
+                                   │
+OpenStreetMap roads    ──►  Road network graph
+                                   │
+                    Remove flooded roads for each date
+                                   │
+         Which villages can no longer reach any shelter?
+                                   │
+     Isolation date ─► Exit route ─► Aid deadline ─► Urgency ranking
+```
+
+1. **Flood maps.** Radar sees water through monsoon clouds. Every source is put on one 20 m grid (EPSG:32646), where each pixel is dry, flooded or unknown.
+   - **Sentinel-1:** a pixel is flooded if VV is below an Otsu threshold *and* at least 3 dB darker than the Feb–Mar dry season. Histograms are saved as proof.
+   - **Other dates:** UNOSAT maps, NASA MODIS and an optional elevation estimate fill gaps, in that order of trust.
+   - **Clouds** are never treated as dry.
+2. **Road graph.** Roads, villages and shelters come from OpenStreetMap, with a hand-checked shelter list for the demo area.
+3. **Cut flooded roads.** Check-points sit every 20 m along each road.
+   - **Cut:** more than 20% of the check-points are flooded.
+   - **Sensitivity test:** the same rule is run at 10% and 40%.
+4. **Isolation check.** A village is isolated when no connected path to any shelter remains. Roads hidden by cloud are solved both ways:
+   - **Connected:** the village reaches a shelter using roads seen to be open.
+   - **Isolated:** no path exists even if every unknown road is open.
+   - **Uncertain:** anything in between.
+   - **Boat-dependent:** villages more than 500 m from any road.
+5. **Survival Clock.** An adjustable supply assumption (days of food and water) gives the aid deadline.
+   - The deadline counts from the earliest possible isolation day.
+   - Ranking puts the earliest deadline first, then the larger population.
+
+## What the User Sees
+
+- A map with a **date slider** that replays the flood, with villages turning red as they are cut off
+- A **village panel** with isolation date, exit route, and aid deadline
+- A **responder view** ranking villages by urgency
+- **Bangla and English** text, plus a short SMS-style alert
+- NASA **GPM rainfall** (local and upstream Meghalaya) and the **MODIS** daily flood trend
+
+---
+
+## Run it
+
+### Easiest (Windows)
+
+Double-click **`run_demo.bat`**. The first time, it creates the Python environment and builds the demo data. Then it opens the app at http://localhost:8501.
+
+### From the terminal
 
 ```powershell
 python -m venv .venv
-.\.venv\Scripts\activate                 # macOS/Linux: source .venv/bin/activate
-pip install -r requirements-pipeline.txt
-pip install -e .
+.\.venv\Scripts\python.exe -m pip install -r requirements-pipeline.txt
+.\.venv\Scripts\python.exe -m pip install -e .
 
 $env:SAFEWINDOW_DATA_DIR="data_demo"     # macOS/Linux: export SAFEWINDOW_DATA_DIR=data_demo
-python scripts/make_demo_data.py         # invented terrain, roads, flood
-python scripts/run_engine.py             # steps 2e, 5, 6, 7, 9, 8
-streamlit run app/streamlit_app.py
+.\.venv\Scripts\python.exe scripts\make_demo_data.py    # invented terrain, roads, flood
+.\.venv\Scripts\python.exe scripts\run_engine.py        # steps 2e, 5, 6, 7, 9, 8
+.\.venv\Scripts\python.exe -m streamlit run app\streamlit_app.py
 ```
 
-The demo data is **entirely made up**, and the app shows a banner saying so. Use it to develop the app and engine while the real data is being prepared.
+The demo data is **entirely made up**, and the app shows a banner saying so. With conda/Miniforge use `conda env create -f environment.yml`.
 
-With conda/Miniforge instead of pip: `conda env create -f environment.yml`.
+Run the tests with `pytest`.
 
-Tests: `pytest`
+### Running on real data
 
----
-
-## Running on real data
-
-All outputs go to `data/` (default). Each script has `--help`.
+Outputs go to `data/` (the default when `SAFEWINDOW_DATA_DIR` is not set). Each script has `--help`.
 
 | Step | Command | Needs |
 |---|---|---|
-| 1 Study area | `python pipeline/01_study_area.py --rank`, then set `UPAZILAS` in `safewindow/config.py`, then `python pipeline/01_study_area.py` (or `--hdx <adm3.shp>`) | internet |
+| 1 Study area | `python pipeline/01_study_area.py --rank`, set `UPAZILAS` in `safewindow/config.py`, then `python pipeline/01_study_area.py` (or `--hdx <adm3.shp>`) | internet |
 | 2A Sentinel-1 | `python pipeline/02a_sentinel1_gee.py --list`, then run without `--list` | Earth Engine |
 | 2B UNOSAT | `python pipeline/02b_unosat.py <flood.shp> --date YYYY-MM-DD` (once per map) | HDX download |
 | 2C MODIS | `python pipeline/02c_modis.py [--register]` | Earthdata login |
@@ -69,43 +123,54 @@ Run the engine locally, then commit `data/app/` (small, web-ready files) and dep
 
 ---
 
-## Method in short
-
-1. **Flood maps** on one 20 m grid in EPSG:32646. Each pixel is `0` dry, `1` flooded or `255` unknown.
-   - **Sentinel-1:** VV below an Otsu threshold *and* ≥ 3 dB darker than the Feb–Mar dry season, with slopes > 5° masked. Histograms are saved as proof.
-   - **Merging sources per date:** Sentinel-1 > UNOSAT > DEM estimate > MODIS. A lower source only fills pixels still unknown.
-   - **Clouds** are never treated as dry.
-2. **Road cut:** check-points every 20 m along each road.
-   - **Cut:** more than 20% of points are flooded.
-   - **Unknown:** most points are unknown.
-   - **Sensitivity test:** also run at 10% and 40%.
-3. **Isolation:** remove cut roads and check whether the village's road junction still connects to a shelter. Roads with unknown status are solved both ways:
-   - **Connected:** a path exists over roads *seen* open.
-   - **Isolated:** no path even if every unknown road is open.
-   - **Uncertain:** anything in between.
-   - **Boat-dependent:** villages more than 500 m from any road.
-4. **Timeline:** isolation is reported as a **range**, from the day after the last connected image to the first isolated image.
-   - **Safe exit route:** the shortest open-road path on the last connected date.
-   - **Aid deadline:** the earliest possible isolation day + supply days.
-   - **Ranking:** earliest deadline first, then larger population.
-
-## Code layout
+## Project Structure
 
 ```
-safewindow/        engine library
-  config.py        study area, thresholds, paths (SAFEWINDOW_DATA_DIR)
-  flood.py         common grid, flood-map manifest, merging
-  roads.py         network files, check-points, cut rule
-  isolation.py     snapping, connected/isolated/uncertain, exit routes
-  timeline.py      isolation range, safe exit, aid deadline, ranking
+safewindow/            engine library
+  config.py            study area, thresholds, paths (SAFEWINDOW_DATA_DIR)
+  flood.py             common grid, flood-map manifest, merging sources
+  roads.py             network files, check-points, cut rule
+  isolation.py         snapping, connected / isolated / uncertain, exit routes
+  timeline.py          isolation range, safe exit, aid deadline, ranking
   places.py, gee.py
-pipeline/          one script per guide step (01 ... 09)
-scripts/           make_demo_data.py, run_engine.py
-app/               Streamlit app (reads data/app only)
-tests/             engine unit tests
+pipeline/              one script per build step (01 ... 09)
+scripts/               make_demo_data.py, run_engine.py
+app/streamlit_app.py   Streamlit web app (reads data/app only)
+tests/                 engine unit tests
+safewindow_build_guide.md   full build plan
+run_demo.bat           one-click demo for Windows
 ```
 
-## Data sources and licences
+## Roadmap
+
+- [x] Project idea, method, and build plan
+- [x] Pipeline code for every step, engine and app working on synthetic demo data
+- [ ] Confirm flood maps for 4–5 dates and a usable road graph (go/no-go)
+- [ ] Compute isolation dates on real data and sanity-check in QGIS
+- [ ] Hand-checked shelter list and population numbers
+- [ ] Validate against news and public reports of isolated areas
+- [ ] Deploy the app online
+- [ ] Optional: test whether rainfall predicts flood extent a few days ahead
+
+## Validation Plan
+
+We will compare predicted isolation dates with news and public reports of isolated areas, and report the error openly (`pipeline/09_validate.py`). There is no perfect ground truth, and we will say so.
+
+## Data Sources
+
+**NASA**
+- NASA-ISRO NISAR (synthetic aperture radar), subject to data availability
+- GPM IMERG (rainfall)
+- MODIS Global Flood Product (MCDWD)
+- NASADEM (slope mask)
+- NASA Worldview (visual context)
+
+**Partner and open data**
+- ESA Sentinel-1 (radar)
+- UNOSAT flood extent maps
+- OpenStreetMap (roads, villages, shelters)
+- WorldPop (population)
+- Copernicus DEM (elevation)
 
 | Data | Source | Licence / terms |
 |---|---|---|
@@ -113,18 +178,36 @@ tests/             engine unit tests
 | Flood maps FL20220525BGD | UNOSAT via HDX | see HDX dataset page |
 | MODIS/VIIRS Global Flood Product (MCDWD) | NASA LANCE / LAADS DAAC | NASA open data |
 | GPM IMERG V07 | NASA GES DISC via Earth Engine | NASA open data |
-| NASADEM (slope mask) | NASA via Earth Engine | NASA open data |
+| NASADEM | NASA via Earth Engine | NASA open data |
 | Copernicus DEM GLO-30 | ESA via Earth Engine | Copernicus DEM licence |
 | Roads, villages, shelters | © OpenStreetMap contributors | ODbL |
 | Population | WorldPop 2020 (100 m) | CC BY 4.0 |
 | Buildings (optional) | Google Open Buildings v3 | CC BY 4.0 / ODbL |
 | Admin boundaries | OCHA COD-AB via HDX | see HDX dataset page |
 
-## Limitations (also on a slide)
+## Tech Stack
 
-- **Supply days is an assumption** (default 7, adjustable from 2 to 14 in the app), not a measurement. Replace the default with a sourced figure and cite it.
-- **Flood maps have gaps:** Sentinel-1 revisited only every 12 days in 2022, clouds block MODIS, and radar misreads some surfaces. Days between images are ranges or labelled estimates.
-- **The DEM gap-fill is a "bathtub" estimate.** It ignores embankments and connectivity.
-- **OpenStreetMap roads and shelters are incomplete.** The demo shelter list is hand-checked.
-- **Validation uses news reports**, which are incomplete and favour easy-to-reach places. There is no perfect ground truth.
-- A road counts as cut by a fixed share of flooded check-points; a short flooded stretch on a long road can be missed. See the sensitivity table for how much this choice matters.
+Python · Google Earth Engine · osmnx · networkx · geopandas · rasterio · Streamlit · folium · QGIS
+
+## Limitations
+
+- **Supply duration is an assumption** (default 7 days, adjustable from 2 to 14), not measured data.
+- **Flood maps have gaps** from clouds and radar errors. Days between satellite images are ranges or labelled estimates.
+- **The elevation gap-fill is a "bathtub" estimate.** It ignores embankments.
+- **OpenStreetMap roads and shelters may be incomplete**, so we use a hand-checked shelter list for the demo area.
+- **A road counts as cut** by a fixed share of flooded check-points. The sensitivity table shows how much this choice matters.
+- This is a research prototype, not an official warning system.
+
+## What Makes It Different
+
+The output is a **deadline**, not a risk map. To our knowledge, no existing tool combines satellite flood data, road-network analysis, and supply timing for Bangladesh in this way. We have not searched exhaustively.
+
+## Team DeltaSentinels
+
+**Team members:**
+- Farhan Labib
+- Nadia Yeasmin
+
+## License
+
+MIT License. See [LICENSE](LICENSE).
