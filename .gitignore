@@ -1,0 +1,11 @@
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+*.egg-info/
+# Raw downloads are large; keep them out of git. Processed app files are small and committed.
+data/raw/
+data/processed/
+data_demo/
+cache/
+.ipynb_checkpoints/

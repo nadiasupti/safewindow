@@ -1,0 +1,24 @@
+# conda (Miniforge) alternative to pip: `conda env create -f environment.yml`
+name: safewindow
+channels:
+  - conda-forge
+dependencies:
+  - python=3.12
+  - geopandas
+  - pyogrio
+  - shapely>=2
+  - rasterio
+  - networkx
+  - osmnx
+  - scikit-learn
+  - matplotlib
+  - streamlit
+  - folium
+  - altair
+  - pytest
+  - pip
+  - pip:
+      - streamlit-folium
+      - earthengine-api
+      - earthaccess
+      - -e .
