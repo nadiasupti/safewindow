@@ -65,8 +65,8 @@ def collection(ee, aoi):
             .select("VV"))
 
 
-def list_dates(ee, aoi) -> pd.DataFrame:
-    col = collection(ee, aoi).filterDate(str(config.FLOOD_START), str(config.FLOOD_END))
+def list_dates(ee, aoi, start: str, end: str) -> pd.DataFrame:
+    col = collection(ee, aoi).filterDate(start, end)
     info = col.reduceColumns(ee.Reducer.toList(3), ["system:time_start", "relativeOrbitNumber_start",
                                                      "orbitProperties_pass"]).get("list").getInfo()
     df = pd.DataFrame(info, columns=["t", "relative_orbit", "pass"])
@@ -75,12 +75,12 @@ def list_dates(ee, aoi) -> pd.DataFrame:
                                    scenes=("t", "size")).reset_index())
 
 
-def flood_map(ee, aoi, day: str, rel_orbit: int, hist_out):
+def flood_map(ee, aoi, day: str, rel_orbit: int, hist_out, dry_start: str, dry_end: str):
     s1 = collection(ee, aoi)
     start = ee.Date(day)
     flood_img = s1.filterDate(start, start.advance(1, "day")).mosaic().focal_median(30, "circle", "meters")
 
-    dry_col = s1.filterDate(config.DRY_REF_START, config.DRY_REF_END)
+    dry_col = s1.filterDate(dry_start, dry_end)
     same_orbit = dry_col.filter(ee.Filter.eq("relativeOrbitNumber_start", int(rel_orbit)))
     dry = ee.Image(ee.Algorithms.If(same_orbit.size().gt(0), same_orbit.median(), dry_col.median()))
     dry = dry.focal_median(30, "circle", "meters")
@@ -110,6 +110,10 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--list", action="store_true", help="only list available image dates")
     ap.add_argument("--dates", nargs="*", help="only these dates (YYYY-MM-DD)")
+    ap.add_argument("--start", default="2022-05-15", help="first date to inspect")
+    ap.add_argument("--end", default="2022-07-15", help="last date to inspect")
+    ap.add_argument("--dry-start", default=config.DRY_REF_START, help="dry reference start date")
+    ap.add_argument("--dry-end", default=config.DRY_REF_END, help="dry reference end date")
     args = ap.parse_args()
 
     ee = gee.init()
@@ -117,7 +121,7 @@ def main():
     grid = Grid.load(paths.grid)
     aoi = gee.study_area_geometry(paths)
 
-    dates = list_dates(ee, aoi)
+    dates = list_dates(ee, aoi, args.start, args.end)
     print(dates.to_string(index=False))
     if args.list:
         return
@@ -127,8 +131,10 @@ def main():
     log = []
     for day, orbit in dates[["date", "relative_orbit"]].itertuples(index=False):
         print(f"{day}: orbit {orbit}")
-        img, t = flood_map(ee, aoi, day, orbit, paths.flood_dir / "otsu" / f"otsu_{day}.png")
-        tmp = gee.download_to_grid(img, grid, paths.raw / "sentinel1" / f"s1_{day}.tif", f"s1_{day}")
+        img, t = flood_map(ee, aoi, day, orbit,
+                           paths.flood_dir / "otsu" / f"otsu_{day}.png", args.dry_start, args.dry_end)
+        tmp = gee.download_to_grid(img, grid, paths.raw / "sentinel1" / f"s1_{day}.tif",
+                       f"s1_{day}", region=aoi, dtype="uint8", nodata=config.UNKNOWN)
         arr = read_onto_grid(tmp, grid)
         register_flood_map(day, "sentinel1", arr, grid, note=f"otsu={t:.2f}dB orbit={orbit}", paths=paths)
         share = (arr == config.FLOODED).mean() * 100

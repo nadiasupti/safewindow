@@ -1,0 +1,39 @@
+date,source,path,note
+2022-05-16,modis,processed/flood/modis_20220516.tif,"MOD09GA NDWI > 0.15 increase vs 2022-02-01..2022-03-31; optical inundation proxy, not ground truth"
+2022-05-16,sentinel1,processed/flood/sentinel1_20220516.tif,otsu=-15.13dB orbit=114
+2022-05-18,modis,processed/flood/modis_20220518.tif,"MOD09GA NDWI > 0.15 increase vs 2022-02-01..2022-03-31; optical inundation proxy, not ground truth"
+2022-05-18,sentinel1,processed/flood/sentinel1_20220518.tif,otsu=-18.00dB orbit=150
+2022-05-23,modis,processed/flood/modis_20220523.tif,"MOD09GA NDWI > 0.15 increase vs 2022-02-01..2022-03-31; optical inundation proxy, not ground truth"
+2022-05-23,sentinel1,processed/flood/sentinel1_20220523.tif,otsu=-15.62dB orbit=41
+2022-05-25,modis,processed/flood/modis_20220525.tif,"MOD09GA NDWI > 0.15 increase vs 2022-02-01..2022-03-31; optical inundation proxy, not ground truth"
+2022-05-25,sentinel1,processed/flood/sentinel1_20220525.tif,otsu=-15.13dB orbit=77
+2022-05-28,modis,processed/flood/modis_20220528.tif,"MOD09GA NDWI > 0.15 increase vs 2022-02-01..2022-03-31; optical inundation proxy, not ground truth"
+2022-05-28,sentinel1,processed/flood/sentinel1_20220528.tif,otsu=-16.63dB orbit=114
+2022-05-30,modis,processed/flood/modis_20220530.tif,"MOD09GA NDWI > 0.15 increase vs 2022-02-01..2022-03-31; optical inundation proxy, not ground truth"
+2022-05-30,sentinel1,processed/flood/sentinel1_20220530.tif,otsu=-12.38dB orbit=150
+2022-06-04,modis,processed/flood/modis_20220604.tif,"MOD09GA NDWI > 0.15 increase vs 2022-02-01..2022-03-31; optical inundation proxy, not ground truth"
+2022-06-04,sentinel1,processed/flood/sentinel1_20220604.tif,otsu=-13.12dB orbit=41
+2022-06-06,modis,processed/flood/modis_20220606.tif,"MOD09GA NDWI > 0.15 increase vs 2022-02-01..2022-03-31; optical inundation proxy, not ground truth"
+2022-06-06,sentinel1,processed/flood/sentinel1_20220606.tif,otsu=-15.13dB orbit=77
+2022-06-09,modis,processed/flood/modis_20220609.tif,"MOD09GA NDWI > 0.15 increase vs 2022-02-01..2022-03-31; optical inundation proxy, not ground truth"
+2022-06-09,sentinel1,processed/flood/sentinel1_20220609.tif,otsu=-18.11dB orbit=114
+2022-06-11,modis,processed/flood/modis_20220611.tif,"MOD09GA NDWI > 0.15 increase vs 2022-02-01..2022-03-31; optical inundation proxy, not ground truth"
+2022-06-11,sentinel1,processed/flood/sentinel1_20220611.tif,otsu=-18.00dB orbit=150
+2022-06-16,modis,processed/flood/modis_20220616.tif,"MOD09GA NDWI > 0.15 increase vs 2022-02-01..2022-03-31; optical inundation proxy, not ground truth"
+2022-06-16,sentinel1,processed/flood/sentinel1_20220616.tif,otsu=-14.13dB orbit=41
+2022-06-18,modis,processed/flood/modis_20220618.tif,"MOD09GA NDWI > 0.15 increase vs 2022-02-01..2022-03-31; optical inundation proxy, not ground truth"
+2022-06-18,sentinel1,processed/flood/sentinel1_20220618.tif,otsu=-16.63dB orbit=77
+2022-06-21,modis,processed/flood/modis_20220621.tif,"MOD09GA NDWI > 0.15 increase vs 2022-02-01..2022-03-31; optical inundation proxy, not ground truth"
+2022-06-21,sentinel1,processed/flood/sentinel1_20220621.tif,otsu=-18.14dB orbit=114
+2022-06-23,modis,processed/flood/modis_20220623.tif,"MOD09GA NDWI > 0.15 increase vs 2022-02-01..2022-03-31; optical inundation proxy, not ground truth"
+2022-06-23,sentinel1,processed/flood/sentinel1_20220623.tif,otsu=-18.00dB orbit=150
+2022-06-28,modis,processed/flood/modis_20220628.tif,"MOD09GA NDWI > 0.15 increase vs 2022-02-01..2022-03-31; optical inundation proxy, not ground truth"
+2022-06-28,sentinel1,processed/flood/sentinel1_20220628.tif,otsu=-14.62dB orbit=41
+2022-06-30,modis,processed/flood/modis_20220630.tif,"MOD09GA NDWI > 0.15 increase vs 2022-02-01..2022-03-31; optical inundation proxy, not ground truth"
+2022-06-30,sentinel1,processed/flood/sentinel1_20220630.tif,otsu=-14.87dB orbit=77
+2022-07-03,modis,processed/flood/modis_20220703.tif,"MOD09GA NDWI > 0.15 increase vs 2022-02-01..2022-03-31; optical inundation proxy, not ground truth"
+2022-07-03,sentinel1,processed/flood/sentinel1_20220703.tif,otsu=-17.62dB orbit=114
+2022-07-05,modis,processed/flood/modis_20220705.tif,"MOD09GA NDWI > 0.15 increase vs 2022-02-01..2022-03-31; optical inundation proxy, not ground truth"
+2022-07-05,sentinel1,processed/flood/sentinel1_20220705.tif,otsu=-18.00dB orbit=150
+2022-07-12,modis,processed/flood/modis_20220712.tif,"MOD09GA NDWI > 0.15 increase vs 2022-02-01..2022-03-31; optical inundation proxy, not ground truth"
+2022-07-12,sentinel1,processed/flood/sentinel1_20220712.tif,otsu=-15.62dB orbit=77

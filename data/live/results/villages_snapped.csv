@@ -1,0 +1,17 @@
+village_id,name,name_bn,place,source,population,node_id,snap_dist_m,boat_dependent
+osm1472175218,ছাতক,ছাতক,town,OpenStreetMap,,6478967126,42.806600779109345,False
+osm2481972070,দোয়ারাবাজার,দোয়ারাবাজার,town,OpenStreetMap,,9873979305,54.66602535906279,False
+osm3642867917,Patharia,,village,OpenStreetMap,,9855687748,119.9991946162559,False
+osm3642870480,Purba Birgaon,,village,OpenStreetMap,,9914303282,43.244126285949726,False
+osm3642877016,Paschim Birgaon,,village,OpenStreetMap,,9861902136,377.8204598464083,False
+osm3642877017,Paschim Pagla,,village,OpenStreetMap,,9830498252,701.081613863674,True
+osm5506312223,Boromuha,,hamlet,OpenStreetMap,,5506317230,69.8921355248805,False
+osm6123937355,Dholposhi,,village,OpenStreetMap,,9833631011,156.7177985598784,False
+osm6123937356,Dholkotob village,,village,OpenStreetMap,,9910541163,135.56716942729392,False
+osm6123937357,"BR 28, 29 rice (Vatipara Haor)",,village,OpenStreetMap,,6125482252,689.9241055139305,True
+osm6720358434,Liakatganj,,village,OpenStreetMap,,6611618852,65.52579438448225,False
+osm9835676256,Kusiura,,village,OpenStreetMap,,9665749035,39.731030563851604,False
+osm9843505109,Thabali,,village,OpenStreetMap,,9664853826,20.282672971840032,False
+osm9843505110,Banshtala,,village,OpenStreetMap,,6611476762,32.297794148872704,False
+osm822959784,"Jawa Bazar, Dergaw",,village,OpenStreetMap,,7683985650,35.073073673721716,False
+osm822959785,Tarchoka - তারচুকা,,village,OpenStreetMap,,9871778153,14.119511889121553,False

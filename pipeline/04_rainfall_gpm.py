@@ -34,8 +34,8 @@ def daily_series(ee, box, start: str, n_days: int) -> list[float]:
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--start", default="2022-05-15")
-    ap.add_argument("--end", default="2022-07-05")
+    ap.add_argument("--start", default=config.FLOOD_START.isoformat())
+    ap.add_argument("--end", default=config.FLOOD_END.isoformat())
     args = ap.parse_args()
 
     ee = gee.init()

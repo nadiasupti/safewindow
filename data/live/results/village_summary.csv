@@ -1,0 +1,17 @@
+village_id,name,population,outcome,last_connected,first_isolated,isolated_from_earliest,reconnected,safe_exit_date,n_dates_isolated,aid_deadline,urgency_rank,isolation_range,exit_shelter_id,exit_shelter,exit_route_m
+osm6123937356,Dholkotob village,,isolated,2022-05-18,2022-05-23,2022-05-19,2022-06-04,2022-05-18,7,2022-05-26,1,isolated between 19 May and 23 May,osm6124539669,Pangaon Community clinic,5653.0
+osm9835676256,Kusiura,,isolated,2022-05-18,2022-05-23,2022-05-19,2022-06-11,2022-05-18,15,2022-05-26,2,isolated between 19 May and 23 May,osm5900028290,Kathalbari Primary School,5706.0
+osm6123937355,Dholposhi,,isolated,2022-05-18,2022-05-23,2022-05-19,2022-06-04,2022-05-18,7,2022-05-26,3,isolated between 19 May and 23 May,osm6124539669,Pangaon Community clinic,2772.0
+osm822959785,Tarchoka - তারচুকা,,isolated,,2022-05-23,2022-05-23,,,9,2022-05-30,4,isolated on or before 23 May,,,
+osm822959784,"Jawa Bazar, Dergaw",,isolated,,2022-05-23,2022-05-23,,,9,2022-05-30,5,isolated on or before 23 May,,,
+osm6720358434,Liakatganj,,isolated,,2022-05-23,2022-05-23,,,9,2022-05-30,6,isolated on or before 23 May,,,
+osm5506312223,Boromuha,,isolated,,2022-05-23,2022-05-23,,,9,2022-05-30,7,isolated on or before 23 May,,,
+osm3642877016,Paschim Birgaon,,isolated,,2022-05-23,2022-05-23,,,9,2022-05-30,8,isolated on or before 23 May,,,
+osm3642867917,Patharia,,isolated,,2022-05-23,2022-05-23,2022-06-04,,6,2022-05-30,9,isolated on or before 23 May,,,
+osm6123937357,"BR 28, 29 rice (Vatipara Haor)",,boat_dependent,,,,,,0,,,,,,
+osm9843505110,Banshtala,,never_isolated,,,,,,0,,,,,,
+osm3642877017,Paschim Pagla,,boat_dependent,,,,,,0,,,,,,
+osm3642870480,Purba Birgaon,,never_isolated,,,,,,0,,,,,,
+osm9843505109,Thabali,,never_isolated,,,,,,0,,,,,,
+osm1472175218,ছাতক,,never_isolated,,,,,,0,,,,,,
+osm2481972070,দোয়ারাবাজার,,never_isolated,,,,,,0,,,,,,

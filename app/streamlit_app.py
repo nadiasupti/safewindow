@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import json
 import math
+import os
 import sys
 from pathlib import Path
 
@@ -22,6 +23,7 @@ from streamlit_folium import st_folium
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from safewindow import config  # noqa: E402
+from safewindow.validation import validate_app_dataset  # noqa: E402
 
 STATUS_COLOR = {"connected": "#2e9d4f", "isolated": "#d7263d", "uncertain": "#f39c12",
                 "boat_dependent": "#8a8f98"}
@@ -107,25 +109,38 @@ def load(app_dir: str):
     meta = json.loads((d / "meta.json").read_text(encoding="utf-8"))
     villages = gpd.read_file(d / "villages.geojson")
     for c in ("last_connected", "first_isolated", "isolated_from_earliest", "reconnected", "safe_exit_date"):
-        villages[c] = pd.to_datetime(villages[c])
+        villages[c] = pd.to_datetime(villages[c], errors="coerce")
     status = pd.read_csv(d / "village_status.csv", dtype={"village_id": str})
+    status["date"] = pd.to_datetime(status["date"], errors="coerce")
     shelters = gpd.read_file(d / "shelters.geojson")
-    routes = gpd.read_file(d / "exit_routes.geojson")
-    cut = gpd.read_file(d / "cut_roads.geojson")
+    routes = gpd.read_file(d / "exit_routes.geojson") if (d / "exit_routes.geojson").exists() else gpd.GeoDataFrame(
+        columns=["village_id", "shelter_id", "shelter_name", "length_m", "geometry"],
+        geometry="geometry", crs="EPSG:4326")
+    cut = gpd.read_file(d / "cut_roads.geojson") if (d / "cut_roads.geojson").exists() else gpd.GeoDataFrame(
+        columns=["edge_id", "date", "geometry"], geometry="geometry", crs="EPSG:4326")
     opt = {n: pd.read_csv(d / f) for n, f in [("rain", "rainfall_daily.csv"), ("modis", "modis_flood_area.csv"),
                                                ("sens", "sensitivity_summary.csv"), ("valid", "validation.csv")]
            if (d / f).exists()}
     return meta, villages, status, shelters, routes, cut, opt
 
 
-def sms_text(v, route_km, shelter) -> str:
-    name = v["name_bn"] if isinstance(v.get("name_bn"), str) and v["name_bn"] else v["name"]
+def sms_text(v, route_km, shelter, lang: str) -> str:
+    if lang == "bn":
+        name = v["name_bn"] if isinstance(v.get("name_bn"), str) and v["name_bn"] else v["name"]
+        lo, hi = v["isolated_from_earliest"], v["first_isolated"]
+        when = (f"{fmt_date(lo, 'bn')} - {fmt_date(hi, 'bn')}" if pd.notna(v["last_connected"])
+                else f"{fmt_date(hi, 'bn')} বা তার আগে")
+        route = f"সড়কপথে {bn_num(f'{route_km:.1f}', 'bn')} কিমি" if route_km is not None else "জানা নেই"
+        return (f"সতর্কতা (পরীক্ষামূলক): {name} এর সড়ক যোগাযোগ {when} এর মধ্যে বিচ্ছিন্ন হতে পারে। "
+                f"নিরাপদ পথ: {route}। নিকটতম আশ্রয়কেন্দ্র: {shelter or 'জানা নেই'}। সরকারি সতর্কবার্তা মেনে চলুন।")
+
+    name = v["name"]
     lo, hi = v["isolated_from_earliest"], v["first_isolated"]
-    when = (f"{fmt_date(lo, 'bn')} - {fmt_date(hi, 'bn')}" if pd.notna(v["last_connected"])
-            else f"{fmt_date(hi, 'bn')} বা তার আগে")
-    route = f"সড়কপথে {bn_num(f'{route_km:.1f}', 'bn')} কিমি" if route_km is not None else "জানা নেই"
-    return (f"সতর্কতা (পরীক্ষামূলক): {name} এর সড়ক যোগাযোগ {when} এর মধ্যে বিচ্ছিন্ন হতে পারে। "
-            f"নিরাপদ পথ: {route}। নিকটতম আশ্রয়কেন্দ্র: {shelter or 'জানা নেই'}। সরকারি সতর্কবার্তা মেনে চলুন।")
+    when = (f"{fmt_date(lo)} - {fmt_date(hi)}" if pd.notna(v["last_connected"])
+            else f"on or before {fmt_date(hi)}")
+    route = f"{route_km:.1f} km by road to {shelter}" if route_km is not None else "not available"
+    return (f"Provisional: {name} may be isolated during {when}. Last safe route: {route}. "
+            f"Follow official flood alerts.")
 
 
 def nearest_village(villages: gpd.GeoDataFrame, lat: float, lng: float, max_m: float = 400):
@@ -136,14 +151,37 @@ def nearest_village(villages: gpd.GeoDataFrame, lat: float, lng: float, max_m: f
     return villages.loc[i, "village_id"] if d[i] <= max_m else None
 
 
+def route_for_date(routes: pd.DataFrame, village_id: str, day: pd.Timestamp) -> pd.DataFrame:
+    """Return only shelter routes that existed on or before the selected map date."""
+    selected = routes[routes["village_id"] == village_id].copy()
+    if "date" not in selected.columns:
+        return selected
+    selected["date"] = pd.to_datetime(selected["date"], errors="coerce")
+    return selected[selected["date"] <= day]
+
+
+def is_default_data_dir(paths: config.Paths) -> bool:
+    """Return whether the selected data directory is the project's live default."""
+    return not os.environ.get("SAFEWINDOW_DATA_DIR")
+
+
 # --- page --------------------------------------------------------------------------
 
 def main():
     st.set_page_config(page_title="SafeWindow", page_icon="🛶", layout="wide")
     paths = config.get_paths()
     if not (paths.app / "meta.json").exists():
-        st.error(f"No app data in {paths.app}. Run `python scripts/run_engine.py` "
-                 "(or make the demo with `python scripts/make_demo_data.py`).")
+        if is_default_data_dir(paths):
+            st.error("No live app data has been built. Run `python pipeline/10_build_live_data.py` "
+                     "after configuring Earth Engine and Earthdata credentials.")
+        else:
+            st.error(f"No app data in {paths.app}. Run `python scripts/run_engine.py`.")
+        st.stop()
+    validation = validate_app_dataset(paths.app)
+    if not validation["valid"]:
+        st.error("The generated SafeWindow dataset failed validation.")
+        for error in validation["errors"]:
+            st.warning(error)
         st.stop()
     meta, villages, status, shelters, routes, cut, opt = load(str(paths.app))
 
@@ -164,6 +202,8 @@ def main():
     st.caption(t["tagline"])
     if meta.get("data_label"):
         st.warning(f"⚠️ {meta['data_label']}")
+    if is_default_data_dir(paths):
+        st.caption("Live public-data feed · refreshed by the pipeline; not an official warning system")
 
     # Survival Clock depends on the slider, so deadlines are recomputed here
     villages["aid_deadline"] = villages["isolated_from_earliest"] + pd.to_timedelta(supply, unit="D")
@@ -199,20 +239,34 @@ def main():
     with col_map:
         b = meta["flood_bounds"][obs_day]
         centre = [(b[0][0] + b[1][0]) / 2, (b[0][1] + b[1][1]) / 2]
-        m = folium.Map(location=centre, zoom_start=12, tiles="CartoDB positron", control_scale=True)
+        m = folium.Map(
+            location=centre,
+            zoom_start=12,
+            tiles="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+            attr="Satellite imagery: Esri, Maxar, Earthstar Geographics, and the GIS User Community",
+            control_scale=True,
+        )
+        folium.TileLayer(
+            tiles="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+            attr="&copy; OpenStreetMap contributors",
+            name="Street map",
+            overlay=True,
+            control=True,
+        ).add_to(m)
         folium.raster_layers.ImageOverlay(
             str(paths.app / "flood" / f"{obs_day.replace('-', '')}.png"), bounds=b, opacity=0.75,
-            name="Flood", interactive=False).add_to(m)
+            name="Flood analysis (Sentinel-1/other sources)", interactive=False).add_to(m)
         cut_now = cut[cut["date"] == obs_day]
         if len(cut_now):
             folium.GeoJson(cut_now[["geometry"]], name="Cut roads",
                            style_function=lambda _: {"color": "#7a1020", "weight": 2, "opacity": 0.7}).add_to(m)
         sel = st.session_state.village
         if sel is not None:
-            r = routes[routes["village_id"] == sel]
+            r = route_for_date(routes, sel, pd.Timestamp(obs_day))
             if len(r):
-                folium.GeoJson(r[["geometry"]], name="Exit route", style_function=lambda _: {
-                    "color": "#0b8a3e", "weight": 6, "opacity": 0.9, "dashArray": "8 6"}).add_to(m)
+                folium.GeoJson(r[["geometry"]], name="Exit route (available by selected date)",
+                               style_function=lambda _: {
+                                   "color": "#0b8a3e", "weight": 6, "opacity": 0.9, "dashArray": "8 6"}).add_to(m)
         for s in shelters.itertuples():
             folium.Marker([s.geometry.y, s.geometry.x], tooltip=f"🏫 {s.name}",
                           icon=folium.Icon(color="blue", icon="home", prefix="fa")).add_to(m)
@@ -255,6 +309,14 @@ def main():
     if st.session_state.village is not None:
         village_panel(villages, routes, st.session_state.village, pd.Timestamp(day), lang, t)
 
+    with st.expander("How the timeline is calculated"):
+        st.markdown(
+            "The app marks a village as isolated only when its road network has no route to a shelter. "
+            "`isolated_from_earliest` is the first possible day after the last connected observation; "
+            "`safe_exit_date` is the last connected observation; and `aid_deadline` is calculated by "
+            "adding the selected supply assumption to the earliest possible isolation date."
+        )
+
     charts(opt, meta, pd.Timestamp(day), lang, t)
 
     c1, c2 = st.columns(2)
@@ -268,7 +330,7 @@ def main():
 
 def village_panel(villages, routes, vid, day: pd.Timestamp, lang, t):
     v = villages[villages["village_id"] == vid].iloc[0]
-    r = routes[routes["village_id"] == vid]
+    r = route_for_date(routes, vid, day)
     route_km = r["length_m"].iloc[0] / 1000 if len(r) else None
     shelter = r["shelter_name"].iloc[0] if len(r) else None
 
@@ -296,9 +358,12 @@ def village_panel(villages, routes, vid, day: pd.Timestamp, lang, t):
         else:
             st.info(t["not_yet"].format(d=fmt_date(day, lang)))
         st.markdown(f"**{t['sms']}**")
-        st.code(sms_text(v, route_km, shelter), language=None, wrap_lines=True)
+        st.code(sms_text(v, route_km, shelter, lang), language=None, wrap_lines=True)
     else:
         b.metric(t["isolation"], t[v["outcome"]] if v["outcome"] in t else t["never"])
+
+    if v["outcome"] == "uncertain":
+        st.info("Road coverage or flood observations are incomplete for this village; use the map date as a range, not a certainty.")
 
 
 def charts(opt, meta, day: pd.Timestamp, lang, t):
@@ -331,4 +396,5 @@ def charts(opt, meta, day: pd.Timestamp, lang, t):
         c2.altair_chart((line + rule + obs).properties(height=220), use_container_width=True)
 
 
-main()
+if __name__ == "__main__":
+    main()

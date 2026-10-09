@@ -42,7 +42,8 @@ def download(paths, grid):
     from safewindow import gee
     ee = gee.init()
     dem = ee.ImageCollection("COPERNICUS/DEM/GLO30").select("DEM").mosaic().toFloat()
-    gee.download_to_grid(dem, grid, paths.processed / "dem.tif", "dem")
+    gee.download_to_grid(dem, grid, paths.processed / "dem.tif", "dem",
+                         region=gee.study_area_geometry(paths), dtype="float32", nodata=-9999)
     print(f"saved {paths.processed / 'dem.tif'}")
 
 

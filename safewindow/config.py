@@ -13,11 +13,12 @@ from datetime import date
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
+DEFAULT_DATA_DIR = "data/live"
 
 # --- Study area (Step 1) -----------------------------------------------------
 # Upazilas to analyse. Change after checking OSM road coverage
 # (pipeline/01_study_area.py --rank).
-UPAZILAS = ["Sunamganj Sadar", "Bishwambharpur", "Dowarabazar"]
+UPAZILAS = ["Sunamganj Sadar", "Chhatak", "Dowarabazar"]
 DISTRICT = "Sunamganj"
 COUNTRY = "Bangladesh"
 
@@ -131,7 +132,7 @@ class Paths:
 
 
 def get_paths() -> Paths:
-    data = Path(os.environ.get("SAFEWINDOW_DATA_DIR", ROOT / "data"))
+    data = Path(os.environ.get("SAFEWINDOW_DATA_DIR", ROOT / DEFAULT_DATA_DIR))
     if not data.is_absolute():
         data = ROOT / data
     return Paths(data)
