@@ -1,5 +1,5 @@
 @echo off
-REM Double-click this file to open the SafeWindow demo app in your browser.
+REM Double-click this file to build and open the SafeWindow demo app.
 cd /d "%~dp0"
 set SAFEWINDOW_DATA_DIR=data_demo
 set PYTHONIOENCODING=utf-8
@@ -11,10 +11,13 @@ if not exist ".venv\Scripts\python.exe" (
     .venv\Scripts\python.exe -m pip install -e .
 )
 
-if not exist "data_demo\app\meta.json" (
-    echo Building demo data...
-    .venv\Scripts\python.exe scripts\make_demo_data.py
-    .venv\Scripts\python.exe scripts\run_engine.py
+echo Building and validating the demo package...
+.venv\Scripts\python.exe scripts\build_demo.py --keep data_demo
+
+if errorlevel 1 (
+    echo Demo build failed. Check the output above.
+    pause
+    exit /b 1
 )
 
 echo.

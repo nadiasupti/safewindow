@@ -22,7 +22,9 @@ from rasterio.warp import Resampling, calculate_default_transform, reproject
 from safewindow import config
 from safewindow.flood import merged_dates, merged_path
 from safewindow.places import load_shelters, load_villages
+from safewindow.provenance import write_manifest
 from safewindow.roads import load_network
+from safewindow.validation import validate_app_dataset
 
 MAX_PX = 2000
 FLOOD_RGBA = (30, 110, 230, 170)
@@ -115,6 +117,12 @@ def main():
     print(f"app data written to {app} ({size:.1f} MB)")
     if size > 90:
         print("WARNING: close to GitHub's 100 MB limit - raise simplify_m or drop cut_roads.geojson")
+
+    write_manifest(paths.data)
+    validation = validate_app_dataset(app)
+    if not validation["valid"]:
+        raise RuntimeError("Generated app data failed validation: " + "; ".join(validation["errors"]))
+    print(f"validated app package: {validation['files']} files")
 
 
 if __name__ == "__main__":

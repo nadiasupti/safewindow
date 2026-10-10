@@ -23,15 +23,17 @@ the layer name. Check the first downloaded file in QGIS; if the product layout
 differs, adjust `open_layer` below.
 """
 import argparse
+import os
 from datetime import timedelta
 
 import numpy as np
 import pandas as pd
 import rasterio
+from rasterio.features import rasterize
 from rasterio.warp import Resampling, reproject
 
-from safewindow import config
-from safewindow.flood import Grid, register_flood_map
+from safewindow import config, gee
+from safewindow.flood import Grid, load_manifest, read_onto_grid, register_flood_map
 from safewindow.places import load_study_area
 
 FLOOD_CODES, DRY_CODES, NODATA_CODE = (2, 3), (0, 1), 255
@@ -60,22 +62,116 @@ def to_classes(path: str, grid: Grid, layer: str) -> np.ndarray:
     return out
 
 
+def process_earth_engine_modis(ee, paths, grid, start: str, end: str,
+                               baseline_start: str, baseline_end: str) -> None:
+    """Register MOD09GA NDWI increase as an optical inundation proxy.
+
+    MOD09GA is surface reflectance, not a flood-class product. This method
+    compares cloud-masked NDWI against a dry-season baseline and records the
+    result as a low-priority proxy, not ground truth.
+    """
+    aoi = gee.study_area_geometry(paths)
+    collection = (ee.ImageCollection("MODIS/061/MOD09GA")
+                  .filterBounds(aoi))
+
+    def clear_reflectance(date_start: str, date_end: str):
+        images = collection.filterDate(date_start, date_end)
+
+        def mask_clouds(image):
+            qa = image.select("state_1km")
+            clear = qa.bitwiseAnd(3).eq(0).And(qa.bitwiseAnd(1 << 2).eq(0))
+            return image.select(["sur_refl_b04", "sur_refl_b02"]).updateMask(clear)
+
+        return images.map(mask_clouds).median().clip(aoi)
+
+    baseline = clear_reflectance(baseline_start, baseline_end)
+    baseline_ndwi = (baseline.select("sur_refl_b04").subtract(baseline.select("sur_refl_b02"))
+                     .divide(baseline.select("sur_refl_b04").add(baseline.select("sur_refl_b02"))))
+    manifest = load_manifest(paths)
+    observed = manifest[(manifest["source"] == "sentinel1") &
+                        (manifest["date"] >= start) & (manifest["date"] <= end)]
+    days = ([pd.Timestamp(value) for value in sorted(observed["date"].unique())]
+            if not observed.empty else list(pd.date_range(start, end, freq="D")))
+    sa = load_study_area(paths)
+    modis_grid = Grid.from_bounds(*sa.to_crs(config.CRS).total_bounds, res=500, pad=0)
+    inside = rasterize([(geom, 1) for geom in sa.geometry],
+                       out_shape=(grid.height, grid.width), transform=grid.transform,
+                       fill=0, dtype="uint8").astype(bool)
+    rows = []
+    for day in days:
+        day_text = day.strftime("%Y-%m-%d")
+        daily = clear_reflectance(day_text, (day + timedelta(days=1)).strftime("%Y-%m-%d"))
+        green, nir = daily.select("sur_refl_b04"), daily.select("sur_refl_b02")
+        ndwi = green.subtract(nir).divide(green.add(nir))
+        valid = ndwi.mask().And(baseline_ndwi.mask())
+        newly_inundated = ndwi.gt(0.15).And(baseline_ndwi.lte(0.15))
+        classified = (ee.Image.constant(config.UNKNOWN)
+                      .where(newly_inundated, config.FLOODED)
+                      .where(valid.And(newly_inundated.Not()), config.DRY)
+                      .updateMask(valid).unmask(config.UNKNOWN).rename("flood").toByte().clip(aoi))
+        output = paths.raw / "modis" / f"modis_{day_text}_500m.tif"
+        gee.download_to_grid(classified, modis_grid, output, f"modis_{day_text}",
+                             region=aoi, dtype="uint8", nodata=config.UNKNOWN)
+        arr = read_onto_grid(output, grid)
+        register_flood_map(day_text, "modis", arr, grid,
+                           note=(f"MOD09GA NDWI > 0.15 increase vs {baseline_start}..{baseline_end}; "
+                                 "optical inundation proxy, not ground truth"), paths=paths)
+        values = arr[inside]
+        rows.append({"date": day_text,
+                     "flooded_km2": round((values == config.FLOODED).sum() * grid.res ** 2 / 1e6, 1),
+                     "unknown_pct": round(100 * (values == config.UNKNOWN).mean(), 1),
+                     "metric": "MOD09GA NDWI increase proxy; resampled to 20 m grid"})
+        print(f"{day_text}: registered MOD09GA proxy; unknown={rows[-1]['unknown_pct']:.1f}%")
+    pd.DataFrame(rows).to_csv(paths.modis_timeline, index=False)
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--short-name", default="MCDWD_L3", help="Earthdata collection short name")
     ap.add_argument("--layer", default="Flood 3-Day 250m")
     ap.add_argument("--register", action="store_true", help="add each day as a flood map")
     ap.add_argument("--find", action="store_true")
+    ap.add_argument("--ee-check", action="store_true", help="check MODIS in Earth Engine without Earthdata login")
+    ap.add_argument("--ee-process", action="store_true", help="register cloud-masked MOD09GA water-change proxy")
+    ap.add_argument("--baseline-start", default=config.DRY_REF_START)
+    ap.add_argument("--baseline-end", default=config.DRY_REF_END)
+    ap.add_argument("--start", default=config.FLOOD_START.isoformat(), help="first date to download")
+    ap.add_argument("--end", default=config.FLOOD_END.isoformat(), help="last date to download")
     args = ap.parse_args()
 
-    import earthaccess
-    earthaccess.login()
-    if args.find:
-        for c in earthaccess.search_datasets(keyword="MCDWD"):
-            print(c.summary()["short-name"], "-", c["umm"].get("EntryTitle", ""))
+    paths = config.get_paths().ensure()
+    if args.ee_check or args.ee_process:
+        ee = gee.init()
+        aoi = gee.study_area_geometry(paths)
+        end_exclusive = (pd.Timestamp(args.end) + timedelta(days=1)).strftime("%Y-%m-%d")
+        collection = (ee.ImageCollection("MODIS/061/MOD09GA")
+                      .filterBounds(aoi)
+                      .filterDate(args.start, end_exclusive))
+        print(f"MODIS_EE_COUNT={collection.size().getInfo()}")
+        print(f"MODIS_EE_COLLECTION=MODIS/061/MOD09GA")
+        print(f"MODIS_EE_DATE_RANGE={args.start}..{args.end}")
+        if args.ee_process:
+            grid = Grid.load(paths.grid)
+            process_earth_engine_modis(ee, paths, grid, args.start, args.end,
+                                       args.baseline_start, args.baseline_end)
         return
 
-    paths = config.get_paths().ensure()
+    import earthaccess
+    username = os.environ.get("EARTHDATA_USERNAME")
+    password = os.environ.get("EARTHDATA_PASSWORD")
+    if not username or not password:
+        raise SystemExit(
+            "Earthdata credentials are required. Set EARTHDATA_USERNAME and "
+            "EARTHDATA_PASSWORD, or use a valid ~/.netrc entry."
+        )
+    earthaccess.login(strategy="environment")
+    if args.find:
+        for c in earthaccess.search_datasets(keyword="MCDWD"):
+            summary = c.summary
+            print(summary["short-name"], "-", summary.get("EntryTitle", ""))
+        return
+
+
     grid = Grid.load(paths.grid)
     sa = load_study_area(paths)
     bbox = tuple(sa.to_crs(config.CRS_WGS84).total_bounds)
@@ -84,8 +180,9 @@ def main():
                        transform=grid.transform, fill=0, dtype="uint8").astype(bool)
     px_km2 = grid.res ** 2 / 1e6
 
-    rows, day = [], config.FLOOD_START
-    while day <= config.FLOOD_END:
+    rows, day = [], pd.Timestamp(args.start)
+    end = pd.Timestamp(args.end)
+    while day <= end:
         d = day.isoformat()
         granules = earthaccess.search_data(short_name=args.short_name, temporal=(d, d), bounding_box=bbox)
         if not granules:

@@ -14,13 +14,20 @@ NEXT (by hand): copy shelters_candidates.csv to shelters_verified.csv, keep
 can be added as new rows with lat/lon.
 """
 import argparse
+import os
+import time
+from collections.abc import Callable
+from typing import TypeVar
 
 import geopandas as gpd
 import osmnx as ox
 import pandas as pd
+import requests
 
 from safewindow import config
 from safewindow.places import SHELTER_COLS, load_study_area
+
+T = TypeVar("T")
 
 PLACE_TAGS = {"place": ["village", "hamlet", "isolated_dwelling", "neighbourhood", "quarter", "suburb", "town"]}
 SHELTER_TAGS = {
@@ -38,9 +45,26 @@ def first(v):
     return v[0] if isinstance(v, list) else v
 
 
-def roads(poly_wgs84):
+def retry_osm_call(query: Callable[[], T], attempts: int = 4, delay_seconds: float = 2.0) -> T:
+    """Retry transient OSM transport failures without swallowing permanent errors."""
+    if attempts < 1:
+        raise ValueError("attempts must be at least 1")
+    last_error = None
+    for attempt in range(1, attempts + 1):
+        try:
+            return query()
+        except (requests.exceptions.ConnectionError, requests.exceptions.Timeout, requests.exceptions.ReadTimeout) as exc:
+            last_error = exc
+            if attempt == attempts:
+                break
+            time.sleep(delay_seconds * (2 ** (attempt - 1)))
+    raise last_error
+
+
+def roads(poly_wgs84, attempts=4):
     print("downloading roads (network_type='all' so village paths are included)...")
-    g = ox.graph_from_polygon(poly_wgs84, network_type="all", retain_all=True, truncate_by_edge=True)
+    g = retry_osm_call(lambda: ox.graph_from_polygon(
+        poly_wgs84, network_type="all", retain_all=True, truncate_by_edge=True), attempts=attempts)
     g = ox.project_graph(g, to_crs=config.CRS)
     paths = config.get_paths()
     ox.save_graphml(g, paths.roads_graph)
@@ -68,8 +92,10 @@ def to_points(gdf: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
     return gdf
 
 
-def villages(poly_wgs84):
-    v = to_points(ox.features_from_polygon(poly_wgs84, PLACE_TAGS)).reset_index()
+def villages(poly_wgs84, attempts=4):
+    features = retry_osm_call(
+        lambda: ox.features_from_polygon(poly_wgs84, PLACE_TAGS), attempts=attempts)
+    v = to_points(features).reset_index()
     out = gpd.GeoDataFrame({
         "village_id": "osm" + v["id"].astype(str),
         "name": v.get("name", pd.Series(index=v.index)).fillna(v.get("name:en")).fillna("(unnamed)"),
@@ -83,8 +109,10 @@ def villages(poly_wgs84):
         print("  Few OSM villages - consider 03b_population.py --buildings (Google Open Buildings).")
 
 
-def shelters(poly_wgs84):
-    s = to_points(ox.features_from_polygon(poly_wgs84, SHELTER_TAGS)).reset_index().to_crs(config.CRS_WGS84)
+def shelters(poly_wgs84, attempts=4):
+    features = retry_osm_call(
+        lambda: ox.features_from_polygon(poly_wgs84, SHELTER_TAGS), attempts=attempts)
+    s = to_points(features).reset_index().to_crs(config.CRS_WGS84)
     kind = pd.Series("", index=s.index)
     for col in ["amenity", "healthcare", "building", "emergency", "social_facility", "office"]:
         if col in s:
@@ -103,15 +131,24 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--buffer-m", type=float, default=1000,
                     help="extend the area so roads to shelters just outside are kept")
+    ap.add_argument("--osm-attempts", type=int, default=4,
+                    help="maximum attempts for transient OpenStreetMap connection failures")
+    ap.add_argument("--osm-timeout", type=int, default=120,
+                    help="HTTP timeout in seconds for each OpenStreetMap request")
     args = ap.parse_args()
+    if args.osm_timeout <= 0:
+        raise SystemExit("--osm-timeout must be a positive number of seconds")
+    overpass_url = os.environ.get("SAFEWINDOW_OSM_OVERPASS_URL", ox.settings.overpass_url)
+    ox.settings.overpass_url = overpass_url
+    ox.settings.requests_timeout = args.osm_timeout
     paths = config.get_paths().ensure()
     sa = load_study_area(paths)
     poly = sa.buffer(args.buffer_m).to_crs(config.CRS_WGS84).union_all()
-    roads(poly)
+    roads(poly, attempts=args.osm_attempts)
     print("downloading villages...")
-    villages(sa.to_crs(config.CRS_WGS84).union_all())
+    villages(sa.to_crs(config.CRS_WGS84).union_all(), attempts=args.osm_attempts)
     print("downloading shelter candidates...")
-    shelters(poly)
+    shelters(poly, attempts=args.osm_attempts)
     print("Now hand-check shelters -> data/processed/shelters_verified.csv (see docstring).")
 
 

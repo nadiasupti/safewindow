@@ -34,7 +34,8 @@ def worldpop_from_gee(paths, sa):
     grid = Grid.from_bounds(*sa.total_bounds, res=WORLDPOP_RES)
     img = (ee.ImageCollection("WorldPop/GP/100m/pop").filter(ee.Filter.eq("country", "BGD"))
            .filter(ee.Filter.eq("year", 2020)).first().select("population").unmask(0).toFloat())
-    return gee.download_to_grid(img, grid, paths.raw / "worldpop_2020.tif", "worldpop")
+    return gee.download_to_grid(img, grid, paths.raw / "worldpop_2020.tif", "worldpop",
+                                region=gee.study_area_geometry(paths), dtype="float32", nodata=-9999)
 
 
 def buildings_from_gee(paths, sa) -> pd.DataFrame:

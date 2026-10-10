@@ -1,0 +1,51 @@
+shelter_id,name,type,lat,lon,source,verified,notes,node_id,snap_dist_m,road_reachable
+osm2332856879,Dowarbazar Upazila Health Complex,hospital,25.042962,91.567837,OpenStreetMap,,,9869638205,53.9568868865659,True
+osm2332856927,Sunamganj General Hospital,hospital,25.065123,91.410647,OpenStreetMap,,,9891094231,41.34975593392613,True
+osm2616249197,Pagla High School,school,24.928214,91.445881,OpenStreetMap,,,9858654566,156.96987156187222,True
+osm2616255489,Khaled General Hospital,hospital,24.921823,91.443354,OpenStreetMap,,,9888578827,531.8761964969453,True
+osm5219154452,Sunny Pharmacy,pharmacy,24.92744,91.545767,OpenStreetMap,,,9871778111,36.06977448365321,True
+osm5900028290,Kathalbari Primary School,school,25.136189,91.561743,OpenStreetMap,,,9843505091,11.494157126632322,True
+osm6124539669,Pangaon Community clinic,hospital,24.867989,91.330711,OpenStreetMap,,,9870559419,30.198481529286543,True
+osm7138660369,"Ryngku, PHC",centre,25.167401,91.558741,OpenStreetMap,,,9665714960,71.05726975864829,True
+osm9707464038,Saptagram Holdarkandi Junior School,school,24.842999,91.48911,OpenStreetMap,,,9913297020,27.238355215243082,True
+osm9707464039,Atpara High School,school,24.833935,91.525034,OpenStreetMap,,,9838606684,130.81921330441952,True
+osm9707464040,Haydorpur High School,school,24.842042,91.555341,OpenStreetMap,,,9891575542,529.5778491985975,True
+osm9707485330,Chhatak Govt. Bohumukhi Model High School,school,25.034441,91.673116,OpenStreetMap,,,9883431559,38.091237599266165,True
+osm9707485331,Chandranath Girls High School,school,25.033573,91.669617,OpenStreetMap,,,6478931177,63.939440925091,True
+osm9707485332,C.B.P High School,school,25.030286,91.659462,OpenStreetMap,,,9876259691,43.61278161426227,True
+osm9707489652,Hazi Jamal Uddin High School,school,24.855,91.563622,OpenStreetMap,,,9843326757,41.23441362650912,True
+osm9707489653,Panchagram High School,school,24.870682,91.53222,OpenStreetMap,,,9830300911,18.0634221858558,True
+osm9707489654,Akota High School,school,24.875505,91.563459,OpenStreetMap,,,9833086853,17.682103341774695,True
+osm9707489655,Khurma High School,school,24.898118,91.601898,OpenStreetMap,,,9835437194,151.72333142215751,True
+osm9707489656,Paalpur High School,school,24.908935,91.625378,OpenStreetMap,,,9845777016,62.27991355587627,True
+osm9707489657,Alhaj Ayajur Rahman Junior School,school,24.937484,91.661068,OpenStreetMap,,,9853111664,7.560879228607148,True
+osm9707489658,Gobinda Gonj M.L. High School,school,24.923902,91.68437,OpenStreetMap,,,9838220208,34.287653990619845,True
+osm9707489659,Hafiz Abdul Goni Talukder Junior School,school,24.949802,91.679084,OpenStreetMap,,,9852391303,36.915044044394115,True
+osm9707489660,Alongi Model High School,school,24.970064,91.634317,OpenStreetMap,,,9857536133,10.360694442205432,True
+osm9707489661,Hazi Kamar Ali High School,school,24.987097,91.664811,OpenStreetMap,,,9855222686,13.911564381991377,True
+osm9707489662,Chhatak Cement Factory High School,school,25.015943,91.642648,OpenStreetMap,,,6459529535,45.55584089676809,True
+osm9707654265,Goni Pur High School,school,24.936062,91.552184,OpenStreetMap,,,9871778342,51.24644837047688,True
+osm9707654267,Mogalgaon Junior School,school,24.957519,91.524361,OpenStreetMap,,,9882532228,18.978306013938205,True
+osm9707654268,Borokapan Atgram High School,school,24.937701,91.497989,OpenStreetMap,,,9868433888,15.12797327596598,True
+osm9707654269,Sadarpur Govt. Primary School,school,24.941161,91.428597,OpenStreetMap,,,9858654584,213.59944327695658,True
+osm9707654270,Joykalas Ujanigaon Rashidia Govt. High School,school,24.946365,91.394304,OpenStreetMap,,,9831466772,80.94542305412905,True
+osm9707654271,Gagli Narainpur Junior School,school,24.95772,91.367032,OpenStreetMap,,,9901371905,213.41852542928308,True
+osm9707654272,Noakhali Saptogram High School,school,24.930371,91.363431,OpenStreetMap,,,9869042623,26.51820920407678,True
+osm9707654274,Astrogram Rasgobinda High School,school,24.968775,91.350817,OpenStreetMap,,,9880972147,35.081118750863475,True
+osm539186501,Gobindogonj RHD Sub Office,building,24.927591,91.690131,OpenStreetMap,,,9849683660,53.364134444339335,True
+osm539192590,Bridge Academy,school,24.933257,91.675631,OpenStreetMap,,,9849683353,43.01081386563513,True
+osm539193065,Tanjina Center,community_centre,24.933629,91.67356,OpenStreetMap,,,9849683348,15.071891894926464,True
+osm539200135,Rahman Pharmacy,pharmacy,24.94083,91.633156,OpenStreetMap,,,9857284255,15.657172400821093,True
+osm539203370,koitok hospital,hospital,24.928423,91.565807,OpenStreetMap,,,9864521188,154.6463030840529,True
+osm539204695,Jawa Government Primary School,school,24.926522,91.550915,OpenStreetMap,,,2439329712,29.38553080841412,True
+osm539350552,Jawabazar Degree College,college,24.929016,91.541947,OpenStreetMap,,,9871778095,53.92079566558596,True
+osm539361524,(unnamed),hospital,24.945203,91.397182,OpenStreetMap,,,9833914036,65.29162851968442,True
+osm539371883,VARD Eye Hospital,hospital,25.038168,91.387362,OpenStreetMap,,,2444314031,184.40837995791404,True
+osm539389434,"Local Government Engineering Department, Sunamganj",building,25.060394,91.390313,OpenStreetMap,,,9838727613,86.43058737067963,True
+osm539391083,Sunamganj Technical School and College,college,25.065215,91.39287,OpenStreetMap,,,2444314119,59.11403713618409,True
+osm539393031,Sunamganj Electricity Office,building,25.066955,91.393287,OpenStreetMap,,,14209908764,27.517364235939493,True
+osm539393549,"Road Division, Sunamganj",building,25.068416,91.395806,OpenStreetMap,,,14211839187,26.222057530161216,True
+osm539968973,Tuker Bazar High School,school,25.030638,91.357013,OpenStreetMap,,,9821500516,139.6640714867231,True
+osm822990739,Dergaw primary school - দেরগাও প্রাইমারি স্কুল,school,24.930838,91.537137,OpenStreetMap,,,7683985641,40.88809351362486,True
+osm1075338151,(unnamed),school,24.946525,91.394388,OpenStreetMap,,,9831466772,71.53806054070283,True
+osm1094056629,(unnamed),school,25.034502,91.673009,OpenStreetMap,,,9883431559,25.783015168849854,True
